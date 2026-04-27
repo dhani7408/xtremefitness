@@ -1,0 +1,168 @@
+// Prisma schema for Xtreme Fitness
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id             String      @id @default(cuid())
+  email          String      @unique
+  name           String
+  passwordHash   String
+  role           String      @default("SUPER_ADMIN") // SUPER_ADMIN | MANAGER
+  teamMemberId   String?     @unique
+  createdAt      DateTime    @default(now())
+  teamMember     TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
+}
+
+model Member {
+  id            String   @id @default(cuid())
+  memberCode    String   @unique
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String   @unique
+  gender        String?  // MALE | FEMALE | OTHER
+  dob           DateTime?
+  address       String?
+  photoUrl      String?
+  status        String   @default("ACTIVE") // ACTIVE | INACTIVE
+  fingerprintId String?  @unique   // ESSL enroll id
+  emergencyNo   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  subscriptions Subscription[]
+  payments      Payment[]
+  attendance    Attendance[]
+  messages      MessageLog[]
+}
+
+model Plan {
+  id        String   @id @default(cuid())
+  name      String
+  months    Int
+  price     Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id         String   @id @default(cuid())
+  memberId   String
+  planId     String
+  startDate  DateTime
+  endDate    DateTime
+  amount     Float
+  amountPaid Float    @default(0)
+  status     String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED
+  createdAt  DateTime @default(now())
+
+  member  Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan    Plan   @relation(fields: [planId], references: [id])
+  payments Payment[]
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  memberId       String
+  subscriptionId String?
+  amount         Float
+  method         String   @default("CASH") // CASH | UPI | CARD | BANK
+  note           String?
+  receivedAt     DateTime @default(now())
+  invoiceNo      String   @unique
+  deletedAt      DateTime?
+
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  title     String
+  category  String   @default("OTHER") // RENT | SALARY | UTILITIES | EQUIPMENT | OTHER
+  amount    Float
+  note      String?
+  spentAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+}
+
+model TeamMember {
+  id            String   @id @default(cuid())
+  employeeCode  String   @unique
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String   @unique
+  role          String   @default("TRAINER") // OWNER | TRAINER | RECEPTION | MANAGER | CLEANING
+  salary        Float    @default(0)
+  photoUrl      String?
+  bio           String?
+  status        String   @default("ACTIVE") // ACTIVE | INACTIVE
+  fingerprintId String?  @unique
+  joinedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  deletedAt     DateTime?
+
+  attendance Attendance[]
+  adminLogin  AdminUser?
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  memberId     String?
+  teamMemberId String?
+  personType   String   // MEMBER | TEAM
+  checkIn      DateTime @default(now())
+  checkOut     DateTime?
+  source       String   @default("ESSL") // ESSL | MANUAL
+  deviceId     String?
+  allowed      Boolean  @default(true)
+  denyReason   String?
+
+  member     Member?     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  teamMember TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@index([checkIn])
+}
+
+model MessageLog {
+  id        String   @id @default(cuid())
+  memberId  String?
+  phone     String
+  kind      String   // DUE | RECEIPT | BROADCAST | HOLIDAY
+  body      String
+  status    String   @default("QUEUED") // QUEUED | SENT | FAILED | SIMULATED
+  provider  String   @default("whatsapp")
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  category  String   @default("GYM") // GYM | CLASSES | EVENTS | TEAM
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+}

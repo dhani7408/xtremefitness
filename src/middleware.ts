@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import type { NextRequest, NextFetchEvent } from "next/server";
+import { withAuth } from "next-auth/middleware";
+
+function managerPathAllowed(pathname: string) {
+  if (pathname.startsWith("/admin/plans")) return true;
+  if (pathname === "/admin/members") return true;
+  if (/^\/admin\/members\/[^/]+$/.test(pathname)) {
+    return !pathname.startsWith("/admin/members/new");
+  }
+  return false;
+}
+
+const adminAuth = withAuth(
+  function middleware(req) {
+    const role = (req.nextauth.token?.role as string) || "";
+    const r = role === "ADMIN" ? "SUPER_ADMIN" : role;
+    if (r === "MANAGER") {
+      const path = req.nextUrl.pathname;
+      if (path === "/admin" || path === "/admin/") {
+        return NextResponse.redirect(new URL("/admin/members", req.url));
+      }
+      if (!managerPathAllowed(path)) {
+        return NextResponse.redirect(new URL("/admin/members", req.url));
+      }
+    }
+    return NextResponse.next();
+  },
+  {
+    pages: { signIn: "/admin/login" },
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+  }
+);
+
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
+  const p = req.nextUrl.pathname;
+  if (p === "/admin/login" || p.startsWith("/admin/login/")) {
+    return NextResponse.next();
+  }
+  return adminAuth(req as Parameters<typeof adminAuth>[0], event);
+}
+
+export const config = {
+  matcher: ["/admin/:path*"],
+};
