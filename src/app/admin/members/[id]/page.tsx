@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { inr, fmtDate } from "@/lib/utils";
+import { inr, fmtDate, paymentInvoiceHref, paymentTypeLabel } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -23,7 +23,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
         include: { plan: true, payments: { where: { deletedAt: null } } },
         orderBy: { createdAt: "desc" },
       },
-      payments: { where: { deletedAt: null }, orderBy: { receivedAt: "desc" } },
+      payments: {
+        where: { deletedAt: null },
+        orderBy: { receivedAt: "desc" },
+        include: { subscription: { include: { plan: true } } },
+      },
       attendance: { orderBy: { checkIn: "desc" }, take: 15 },
       messages: { orderBy: { createdAt: "desc" }, take: 10 },
     },
@@ -37,8 +41,11 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
   });
 
   const now = new Date();
-  const activeSub = member.subscriptions.find((s) => s.endDate >= now);
-  const pending = member.subscriptions.reduce((acc, s) => acc + (s.amount - s.amountPaid), 0);
+  const activeSubs = member.subscriptions
+    .filter((s) => s.endDate >= now)
+    .slice()
+    .sort((a, b) => a.endDate.getTime() - b.endDate.getTime());
+  const pending = member.subscriptions.reduce((acc, s) => acc + Math.max(0, s.amount - s.amountPaid), 0);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -63,8 +70,10 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             {member.deletedAt && (
               <span className="badge badge-gray">Deleted {fmtDate(member.deletedAt)}</span>
             )}
-            {activeSub ? (
-              <span className="badge badge-green">Sub Active · ends {fmtDate(activeSub.endDate)}</span>
+            {activeSubs.length > 0 ? (
+              <span className="badge badge-green">
+                {activeSubs.length === 1 ? "1 active plan" : `${activeSubs.length} active plans`}
+              </span>
             ) : (
               <span className="badge badge-red">No active subscription</span>
             )}
@@ -74,7 +83,12 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               <span className="badge badge-yellow">Fingerprint not enrolled</span>
             )}
           </div>
-          <div className="mt-4 border-t border-black/5 pt-3">
+          <div className="mt-4 flex flex-wrap gap-3 border-t border-black/5 pt-3">
+            {!member.deletedAt && (
+              <Link href={`/admin/members/${member.id}/edit`} className="btn btn-outline text-sm">
+                Edit details
+              </Link>
+            )}
             {!member.deletedAt && (
               <DeleteButton
                 endpoint={`/api/members/${member.id}`}
@@ -96,12 +110,21 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             )}
           </div>
         </div>
-        {!manager && <MemberActions member={JSON.parse(JSON.stringify(member))} plans={JSON.parse(JSON.stringify(plans))} pending={pending} />}
+        {!member.deletedAt && (superUser || manager) && (
+          <MemberActions
+            member={JSON.parse(JSON.stringify(member))}
+            plans={superUser ? JSON.parse(JSON.stringify(plans)) : []}
+            isSuperUser={superUser}
+          />
+        )}
       </div>
 
       <div className="lg:col-span-2 space-y-6">
         <section className="card p-5">
           <h3 className="mb-3 font-semibold">Subscriptions</h3>
+          <p className="mb-3 text-xs text-ink-700">
+            <strong>Due</strong> = plan amount minus paid. Record payments in the sidebar; each payment gets a printable invoice.
+          </p>
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-ink-700">
               <tr>
@@ -110,27 +133,32 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
                 <th>To</th>
                 <th>Amount</th>
                 <th>Paid</th>
+                <th>Due</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {member.subscriptions.map((s) => (
+              {member.subscriptions.map((s) => {
+                const due = Math.max(0, s.amount - s.amountPaid);
+                return (
                 <tr key={s.id}>
                   <td className="py-2">{s.plan.name}</td>
                   <td>{fmtDate(s.startDate)}</td>
                   <td>{fmtDate(s.endDate)}</td>
                   <td>{inr(s.amount)}</td>
                   <td>{inr(s.amountPaid)}</td>
+                  <td className={due > 0.01 ? "font-semibold text-brand" : "text-ink-700"}>{inr(due)}</td>
                   <td>
                     <span className={`badge ${s.endDate >= now ? "badge-green" : "badge-red"}`}>
                       {s.endDate >= now ? "Active" : "Expired"}
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {member.subscriptions.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-3 text-ink-700">
+                  <td colSpan={7} className="py-3 text-ink-700">
                     No subscriptions yet.
                   </td>
                 </tr>
@@ -139,13 +167,23 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           </table>
         </section>
         <section className="card p-5">
-          <h3 className="mb-3 font-semibold">Payments</h3>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <h3 className="font-semibold">Payments & invoices</h3>
+            {pending > 0 && (
+              <div className="text-sm">
+                <span className="text-ink-700">Outstanding: </span>
+                <span className="font-bold text-brand">{inr(pending)}</span>
+              </div>
+            )}
+          </div>
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-ink-700">
               <tr>
                 <th className="py-2">Invoice</th>
+                <th>Plan</th>
                 <th>Date</th>
                 <th>Amount</th>
+                <th>Type</th>
                 <th>Method</th>
                 <th></th>
               </tr>
@@ -154,13 +192,32 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               {member.payments.map((p) => (
                 <tr key={p.id}>
                   <td className="py-2 font-mono text-xs">{p.invoiceNo}</td>
+                  <td className="max-w-[140px] truncate text-ink-800" title={p.subscription?.plan.name}>
+                    {p.subscription?.plan.name ?? "—"}
+                  </td>
                   <td>{fmtDate(p.receivedAt)}</td>
                   <td>{inr(p.amount)}</td>
+                  <td>
+                    <span
+                      className={`badge text-[10px] ${p.payType === "FULL" ? "badge-green" : p.payType === "PARTIAL" ? "badge-yellow" : "badge-gray"}`}
+                      title={paymentTypeLabel(p.payType).text}
+                    >
+                      {paymentTypeLabel(p.payType).short}
+                    </span>
+                  </td>
                   <td>{p.method}</td>
                   <td className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link className="text-brand hover:underline" href={`/api/invoice/${p.id}`} target="_blank">
-                        Invoice
+                    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs sm:text-sm">
+                      <Link
+                        className="text-brand hover:underline"
+                        href={paymentInvoiceHref(p.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open
+                      </Link>
+                      <Link className="font-semibold text-brand hover:underline" href={paymentInvoiceHref(p.id, "download")}>
+                        Download
                       </Link>
                       {!manager && (
                         <DeleteButton
@@ -175,8 +232,8 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               ))}
               {member.payments.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-3 text-ink-700">
-                    No payments yet.
+                  <td colSpan={7} className="py-3 text-ink-700">
+                    No payments yet. Use <strong>Record payment</strong> in the sidebar to collect fees; an invoice is generated for each entry.
                   </td>
                 </tr>
               )}

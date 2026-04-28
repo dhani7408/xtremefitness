@@ -32,6 +32,10 @@ body {
 .btn-outline {
   @apply border border-black/10 text-ink-900 hover:bg-black/5;
 }
+/* For dark hero / parallax sections — outline buttons must stay light (utilities lose to .btn-outline order). */
+.btn-outline-inverse {
+  @apply border border-white/40 bg-transparent text-white hover:bg-white/10;
+}
 .input {
   @apply w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand;
 }

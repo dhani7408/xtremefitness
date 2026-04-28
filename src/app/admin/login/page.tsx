@@ -1,8 +1,9 @@
 "use client";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Dumbbell } from "lucide-react";
+import { getRoleFromSession, safeAdminPostLoginRedirect } from "@/lib/roles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,9 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (res?.ok) {
-      router.push(params.get("callbackUrl") || "/admin");
+      const session = await getSession();
+      const dest = safeAdminPostLoginRedirect(params.get("callbackUrl"), getRoleFromSession(session));
+      router.push(dest);
       router.refresh();
     } else {
       setErr("Invalid email or password");
@@ -42,19 +45,16 @@ export default function LoginPage() {
         <div className="space-y-3">
           <div>
             <label className="label">Email</label>
-            <input className="input" name="email" type="email" defaultValue="admin@xtremefitness.in" required />
+            <input className="input" name="email" type="email" autoComplete="username" required />
           </div>
           <div>
             <label className="label">Password</label>
-            <input className="input" name="password" type="password" defaultValue="admin@123" required />
+            <input className="input" name="password" type="password" autoComplete="current-password" required />
           </div>
         </div>
         <button disabled={loading} className="btn btn-primary mt-5 w-full">
           {loading ? "Signing in..." : "Sign In"}
         </button>
-        <p className="mt-4 text-xs text-ink-700">
-          Default: admin@xtremefitness.in / admin@123
-        </p>
       </form>
     </div>
   );

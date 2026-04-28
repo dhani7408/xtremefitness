@@ -153,6 +153,7 @@ async function main() {
         subscriptionId: sub.id,
         amount: i === 2 ? plan.price / 2 : plan.price,
         method: "UPI",
+        payType: i === 2 ? "PARTIAL" : "FULL",
         invoiceNo: `INV-${Date.now()}-${i}`,
       },
     });

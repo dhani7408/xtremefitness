@@ -1,6 +1,8 @@
 // Prisma schema for Xtreme Fitness
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Include Windows engines so the app runs after `npm install` / copy from macOS (darwin-arm64).
+  binaryTargets = ["native", "windows", "darwin-arm64"]
 }
 
 datasource db {
@@ -78,6 +80,8 @@ model Payment {
   subscriptionId String?
   amount         Float
   method         String   @default("CASH") // CASH | UPI | CARD | BANK
+  /// FULL = paid entire balance due on the subscription at time of payment; PARTIAL otherwise
+  payType        String   @default("PARTIAL") // FULL | PARTIAL
   note           String?
   receivedAt     DateTime @default(now())
   invoiceNo      String   @unique

@@ -62,10 +62,7 @@ export default function ParallaxHero() {
           <Link href="/pricing" className="btn btn-primary px-6 py-3 text-base shadow-glow">
             Join Now
           </Link>
-          <Link
-            href="/gallery"
-            className="btn btn-outline border-white/20 px-6 py-3 text-base text-white hover:bg-white/10"
-          >
+          <Link href="/gallery" className="btn btn-outline-inverse px-6 py-3 text-base">
             View Gallery
           </Link>
         </div>

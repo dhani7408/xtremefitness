@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { inr, fmtDate } from "@/lib/utils";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+function safeInvoiceFilename(invoiceNo: string) {
+  return invoiceNo.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 80) || "invoice";
+}
+
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const p = await prisma.payment.findUnique({
     where: { id: params.id },
     include: { member: true, subscription: { include: { plan: true } } },
   });
   if (!p) return new NextResponse("Not found", { status: 404 });
+
+  const asDownload =
+    req.nextUrl.searchParams.get("download") === "1" ||
+    req.nextUrl.searchParams.get("download") === "true";
+
+  const downloadTip = asDownload
+    ? `<p class="muted" style="margin-top:16px">This file was saved to your device. To get a <strong>PDF</strong>, open it and choose <strong>Print</strong> (Ctrl+P / ⌘P), then select <strong>Save as PDF</strong> as the printer.</p>`
+    : "";
 
   const html = `<!doctype html>
 <html>
@@ -54,6 +66,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
           <td>Method</td>
           <td class="right">${p.method}</td>
         </tr>
+        <tr>
+          <td>Payment type</td>
+          <td class="right">${p.payType === "FULL" ? "Full (cleared balance due)" : "Partial"}</td>
+        </tr>
       </table>
 
       <div class="right" style="margin-top:16px">
@@ -61,10 +77,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         <div class="total">${inr(p.amount)}</div>
       </div>
 
-      <a href="javascript:window.print()" class="btn">Download / Print</a>
+      <a href="javascript:window.print()" class="btn">Print</a>
+      ${downloadTip}
       <div class="muted" style="margin-top:24px">Thank you for training with us at Xtreme Fitness!</div>
     </div>
   </body>
 </html>`;
-  return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+
+  const headers: Record<string, string> = { "Content-Type": "text/html; charset=utf-8" };
+  if (asDownload) {
+    headers["Content-Disposition"] = `attachment; filename="Xtreme-Invoice-${safeInvoiceFilename(p.invoiceNo)}.html"`;
+  }
+
+  return new NextResponse(html, { headers });
 }

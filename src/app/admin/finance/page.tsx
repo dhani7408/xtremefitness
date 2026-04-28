@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { inr, fmtDate } from "@/lib/utils";
+import { inr, fmtDate, paymentInvoiceHref, paymentTypeLabel } from "@/lib/utils";
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import ExpenseForm from "./expense-form";
@@ -45,7 +45,15 @@ export default async function FinancePage() {
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-ink-700">
-              <tr><th className="p-3">Invoice</th><th className="p-3">Member</th><th className="p-3">Date</th><th className="p-3">Method</th><th className="p-3">Amount</th><th></th></tr>
+              <tr>
+                <th className="p-3">Invoice</th>
+                <th className="p-3">Member</th>
+                <th className="p-3">Date</th>
+                <th className="p-3">Type</th>
+                <th className="p-3">Method</th>
+                <th className="p-3">Amount</th>
+                <th></th>
+              </tr>
             </thead>
             <tbody className="divide-y">
               {payments.map((p) => (
@@ -57,17 +65,30 @@ export default async function FinancePage() {
                     </Link>
                   </td>
                   <td className="p-3">{fmtDate(p.receivedAt)}</td>
+                  <td className="p-3">
+                    <span
+                      className={`badge text-[10px] ${p.payType === "FULL" ? "badge-green" : p.payType === "PARTIAL" ? "badge-yellow" : "badge-gray"}`}
+                      title={paymentTypeLabel(p.payType).text}
+                    >
+                      {paymentTypeLabel(p.payType).short}
+                    </span>
+                  </td>
                   <td className="p-3">{p.method}</td>
                   <td className="p-3 font-semibold">{inr(p.amount)}</td>
                   <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/api/invoice/${p.id}`} target="_blank" className="text-brand hover:underline">Invoice</Link>
+                    <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                      <Link href={paymentInvoiceHref(p.id)} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                        Open
+                      </Link>
+                      <Link href={paymentInvoiceHref(p.id, "download")} className="text-brand hover:underline">
+                        Download
+                      </Link>
                       <DeleteButton endpoint={`/api/payments/${p.id}`} iconOnly confirm={`Delete payment of ₹${p.amount}?`} />
                     </div>
                   </td>
                 </tr>
               ))}
-              {payments.length === 0 && <tr><td colSpan={6} className="p-5 text-center text-ink-700">No payments recorded.</td></tr>}
+              {payments.length === 0 && <tr><td colSpan={7} className="p-5 text-center text-ink-700">No payments recorded.</td></tr>}
             </tbody>
           </table>
         </section>

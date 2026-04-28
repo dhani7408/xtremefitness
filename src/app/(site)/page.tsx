@@ -268,7 +268,7 @@ export default async function HomePage() {
               <Link href="/contact" className="btn btn-primary bg-white text-ink-900 hover:bg-white/90 shadow-glow">
                 Book Free Trial
               </Link>
-              <Link href="/pricing" className="btn btn-outline border-white/40 text-white hover:bg-white/10">
+              <Link href="/pricing" className="btn btn-outline-inverse">
                 View Plans
               </Link>
             </div>

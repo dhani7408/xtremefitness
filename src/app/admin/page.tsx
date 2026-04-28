@@ -7,6 +7,7 @@ import {
   CircleOff,
   Fingerprint,
   AlertTriangle,
+  Banknote,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
     todayCheckins,
     dueList,
     recentAtt,
+    allSubsBalance,
   ] = await Promise.all([
     prisma.member.count({ where: { deletedAt: null } }),
     prisma.member.count({ where: { deletedAt: null, status: "ACTIVE" } }),
@@ -52,7 +54,15 @@ export default async function DashboardPage() {
       take: 10,
       include: { member: true, teamMember: true },
     }),
+    prisma.subscription.findMany({
+      where: { member: { deletedAt: null } },
+      select: { memberId: true, amount: true, amountPaid: true },
+    }),
   ]);
+
+  const subsWithBalance = allSubsBalance.filter((s) => s.amount - s.amountPaid > 0.001);
+  const pendingPaymentMemberCount = new Set(subsWithBalance.map((s) => s.memberId)).size;
+  const pendingPaymentPlanCount = subsWithBalance.length;
 
   const stats = [
     { label: "Today's Collection", value: inr(todayCollection._sum.amount || 0), icon: IndianRupee, color: "bg-pink-500" },
@@ -67,6 +77,38 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/admin/pending-payments"
+        className="block rounded-xl border border-black/10 bg-white p-5 shadow-sm transition hover:border-brand/30 hover:shadow-md"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <Banknote className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-3xl font-extrabold text-ink-900">{pendingPaymentMemberCount}</div>
+              <div className="text-sm text-ink-700">
+                {pendingPaymentMemberCount === 0 ? (
+                  <>All members are fully paid on recorded plans.</>
+                ) : (
+                  <>
+                    member{pendingPaymentMemberCount === 1 ? "" : "s"} with balance due
+                    {pendingPaymentPlanCount > 0 && (
+                      <span className="text-ink-600">
+                        {" "}
+                        · {pendingPaymentPlanCount} plan{pendingPaymentPlanCount === 1 ? "" : "s"} outstanding
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-brand">Pending payments →</span>
+        </div>
+      </Link>
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="card p-4">

@@ -42,7 +42,7 @@ export default async function MembersPage({
       ],
     },
     include: {
-      subscriptions: { orderBy: { endDate: "desc" }, take: 1 },
+      subscriptions: { orderBy: { endDate: "desc" }, take: 1, include: { plan: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -99,7 +99,7 @@ export default async function MembersPage({
               <th className="p-3">Phone</th>
               <th className="p-3">Status</th>
               {trash && <th className="p-3">Deleted</th>}
-              {!trash && <th className="p-3">Subscription</th>}
+              {!trash && <th className="p-3">Membership</th>}
               <th className="p-3"></th>
             </tr>
           </thead>
@@ -128,7 +128,8 @@ export default async function MembersPage({
                     <td className="p-3 text-xs">
                       {sub ? (
                         <>
-                          <span className={`badge ${subActive ? "badge-green" : "badge-red"}`}>
+                          <div className="font-medium text-ink-900">{sub.plan.name}</div>
+                          <span className={`badge mt-1 inline-flex ${subActive ? "badge-green" : "badge-red"}`}>
                             {subActive ? "Active" : "Expired"}
                           </span>
                           <div className="mt-1 text-ink-700">Ends {fmtDate(sub.endDate)}</div>
@@ -143,6 +144,11 @@ export default async function MembersPage({
                       <Link href={`/admin/members/${m.id}`} className="text-brand hover:underline">
                         View
                       </Link>
+                      {!trash && (
+                        <Link href={`/admin/members/${m.id}/edit`} className="text-brand hover:underline">
+                          Edit
+                        </Link>
+                      )}
                       {trash && superUser ? (
                         <DeleteButton
                           endpoint={`/api/members/${m.id}`}
