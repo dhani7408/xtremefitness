@@ -7,18 +7,25 @@ import Reveal from "@/components/site/Reveal";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [galleryPreview, trainers] = await Promise.all([
-    prisma.galleryImage.findMany({
-      where: { deletedAt: null, active: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-      take: 6,
-    }),
-    prisma.teamMember.findMany({
-      where: { deletedAt: null, status: "ACTIVE", role: { in: ["OWNER", "TRAINER"] } },
-      orderBy: [{ role: "asc" }],
-      take: 3,
-    }),
-  ]);
+  let galleryPreview: Awaited<ReturnType<typeof prisma.galleryImage.findMany>> = [];
+  let trainers: Awaited<ReturnType<typeof prisma.teamMember.findMany>> = [];
+  try {
+    [galleryPreview, trainers] = await Promise.all([
+      prisma.galleryImage.findMany({
+        where: { deletedAt: null, active: true },
+        orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+        take: 6,
+      }),
+      prisma.teamMember.findMany({
+        where: { deletedAt: null, status: "ACTIVE", role: { in: ["OWNER", "TRAINER"] } },
+        orderBy: [{ role: "asc" }],
+        take: 3,
+      }),
+    ]);
+  } catch (error) {
+    // Production safety: render homepage even if database tables are not initialized yet.
+    console.error("Homepage DB fetch failed:", error);
+  }
   const testimonials = [
     {
       name: "Karan Mehta",
