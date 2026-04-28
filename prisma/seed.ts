@@ -136,30 +136,67 @@ async function main() {
     const plan = i % 2 === 0 ? plan3! : plan1!;
     const start = addDays(now, -30 * (i % 3));
     const end = addDays(start, plan.months * 30);
-    const sub = await prisma.subscription.create({
-      data: {
+    const paymentAmount = i === 2 ? plan.price / 2 : plan.price;
+
+    // Idempotent seed: reuse the same member+plan+dates subscription if it already exists.
+    let sub = await prisma.subscription.findFirst({
+      where: {
         memberId: member.id,
         planId: plan.id,
         startDate: start,
         endDate: end,
-        amount: plan.price,
-        amountPaid: i === 2 ? plan.price / 2 : plan.price,
-        status: end < now ? "EXPIRED" : "ACTIVE",
       },
     });
-    await prisma.payment.create({
-      data: {
+    if (!sub) {
+      sub = await prisma.subscription.create({
+        data: {
+          memberId: member.id,
+          planId: plan.id,
+          startDate: start,
+          endDate: end,
+          amount: plan.price,
+          amountPaid: paymentAmount,
+          status: end < now ? "EXPIRED" : "ACTIVE",
+        },
+      });
+    } else {
+      sub = await prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          amount: plan.price,
+          amountPaid: paymentAmount,
+          status: end < now ? "EXPIRED" : "ACTIVE",
+        },
+      });
+    }
+
+    // Stable invoice numbers prevent duplicate payments on repeated seeds.
+    const seedInvoiceNo = `SEED-${m.memberCode}-${plan.name.replace(/\s+/g, "-").toUpperCase()}`;
+    await prisma.payment.upsert({
+      where: { invoiceNo: seedInvoiceNo },
+      update: {
         memberId: member.id,
         subscriptionId: sub.id,
-        amount: i === 2 ? plan.price / 2 : plan.price,
+        amount: paymentAmount,
         method: "UPI",
         payType: i === 2 ? "PARTIAL" : "FULL",
-        invoiceNo: `INV-${Date.now()}-${i}`,
+      },
+      create: {
+        memberId: member.id,
+        subscriptionId: sub.id,
+        amount: paymentAmount,
+        method: "UPI",
+        payType: i === 2 ? "PARTIAL" : "FULL",
+        invoiceNo: seedInvoiceNo,
       },
     });
   }
 
-  // Expenses
+  // Expenses (replace prior seeded entries by title to keep seed idempotent)
+  const seededExpenseTitles = ["Shop Rent - Mar", "Electricity Bill", "Dumbbells set"];
+  await prisma.expense.deleteMany({
+    where: { title: { in: seededExpenseTitles } },
+  });
   await prisma.expense.createMany({
     data: [
       { title: "Shop Rent - Mar", category: "RENT", amount: 45000 },
