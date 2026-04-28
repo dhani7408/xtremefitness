@@ -12,7 +12,25 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 export const fetchCache = "force-no-store";
 
+type SubWithMember = Prisma.SubscriptionGetPayload<{
+  include: { member: true };
+}>;
+
 export async function GET(_req: NextRequest) {
+  // Optional protection for Vercel Cron: when CRON_SECRET is set,
+  // only requests with matching Authorization header are allowed.
+  // Build-time prerender requests won't have this header, so they exit early.
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = _req.headers.get("authorization");
+    if (auth !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        { processed: 0, sent: 0, skipped: true, reason: "unauthorized cron request" },
+        { status: 401 }
+      );
+    }
+  }
+
   // During `next build`, some setups may still evaluate route handlers.
   // Never touch DB in build phase; run only at runtime (cron hit).
   if (process.env.NEXT_PHASE === "phase-production-build") {
@@ -23,11 +41,19 @@ export async function GET(_req: NextRequest) {
       reason: "build phase",
     });
   }
+  if (process.env.VERCEL === "1" && !process.env.VERCEL_REGION) {
+    return NextResponse.json({
+      processed: 0,
+      sent: 0,
+      skipped: true,
+      reason: "vercel build phase",
+    });
+  }
 
   const now = new Date();
   const in7 = new Date(now.getTime() + 7 * 86400000);
 
-  let subs: Awaited<ReturnType<typeof prisma.subscription.findMany>> = [];
+  let subs: SubWithMember[] = [];
   try {
     subs = await prisma.subscription.findMany({
       where: { endDate: { lte: in7 } },
