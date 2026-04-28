@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
+    "db:push:prod": "dotenv -e .env.production -- prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:prod": "dotenv -e .env.production -- tsx prisma/seed.ts",
     "db:studio": "prisma studio",
