@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Sidebar from "@/components/admin/Sidebar";
+import AdminShellLayout from "@/components/admin/AdminShellLayout";
 import { normalizeAdminRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
@@ -17,32 +17,12 @@ export default async function AdminLayout({
       : "Super admin";
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-ink-900">
-      {session && <Sidebar />}
-      <div className="flex min-h-screen w-full flex-col">
-        {session ? (
-          <AdminShell roleLabel={roleLabel}>{children}</AdminShell>
-        ) : (
-          <LoginOrRedirect>{children}</LoginOrRedirect>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AdminShell({ children, roleLabel }: { children: React.ReactNode; roleLabel: string }) {
-  return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black/5 bg-white px-6">
-        <div className="font-semibold">Admin Panel</div>
-        <div className="flex items-center gap-3 text-sm text-ink-700">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-ink-900">
-            {roleLabel}
-          </span>
-          <span>Xtreme Fitness Gym</span>
-        </div>
-      </header>
-      <main className="flex-1 p-6">{children}</main>
+      {session ? (
+        <AdminShellLayout roleLabel={roleLabel}>{children}</AdminShellLayout>
+      ) : (
+        <LoginOrRedirect>{children}</LoginOrRedirect>
+      )}
     </>
   );
 }

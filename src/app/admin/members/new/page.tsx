@@ -10,6 +10,7 @@ export default function NewMemberPage() {
   const [err, setErr] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +31,8 @@ export default function NewMemberPage() {
       cancelled = true;
     };
   }, []);
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,15 +65,21 @@ export default function NewMemberPage() {
             required
             disabled={plansLoading || plans.length === 0}
             className="input"
-            defaultValue=""
+            value={selectedPlanId}
+            onChange={(e) => setSelectedPlanId(e.target.value)}
           >
             <option value="">{plansLoading ? "Loading packages…" : plans.length === 0 ? "No packages — add plans first" : "Select a package"}</option>
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} — {p.months} mo · ₹{p.price}
+                {p.name} (₹{p.price})
               </option>
             ))}
           </select>
+          {selectedPlan && (
+            <p className="mt-1 text-xs text-ink-700">
+              Duration: {selectedPlan.months} month{selectedPlan.months > 1 ? "s" : ""} · Fee: ₹{selectedPlan.price}
+            </p>
+          )}
           {plans.length === 0 && !plansLoading && (
             <p className="mt-1 text-xs text-ink-700">
               Create active plans under <strong>Plans</strong> in the admin menu, then refresh this page.
