@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     req.nextUrl.searchParams.get("download") === "true";
 
   const downloadTip = asDownload
-    ? `<p class="muted" style="margin-top:16px">This file was saved to your device. To get a <strong>PDF</strong>, open it and choose <strong>Print</strong> (Ctrl+P / ⌘P), then select <strong>Save as PDF</strong> as the printer.</p>`
+    ? `<p class="muted" style="margin-top:16px">This file was saved to your device. To get a <strong>PDF</strong>, click the <strong>Download PDF</strong> button below or use Print (Ctrl+P).</p>`
     : "";
 
   const html = `<!doctype html>
@@ -26,25 +26,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   <head>
     <meta charset="utf-8" />
     <title>Invoice ${p.invoiceNo}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
       body{font-family:ui-sans-serif,system-ui,Arial;margin:40px;color:#111}
-      .card{max-width:720px;margin:auto;border:1px solid #eee;border-radius:12px;padding:32px}
+      .card{max-width:720px;margin:auto;border:1px solid #eee;border-radius:12px;padding:32px;background:#fff}
       h1{margin:0;color:#DC2626}
       .muted{color:#666;font-size:12px}
       table{width:100%;border-collapse:collapse;margin-top:16px}
       td,th{padding:10px;border-bottom:1px solid #f1f1f1;text-align:left}
       .right{text-align:right}
       .total{font-size:20px;font-weight:800;color:#DC2626}
-      .btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#DC2626;color:#fff;text-decoration:none;border-radius:6px}
-      @media print { .btn{display:none} }
+      .btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#DC2626;color:#fff;text-decoration:none;border-radius:6px;border:none;cursor:pointer;font-size:14px;font-weight:600}
+      .btn-outline{background:#fff;color:#DC2626;border:1px solid #DC2626;margin-left:8px}
+      @media print { .no-print{display:none !important} }
+      .note-box { margin-top: 24px; padding: 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; font-size: 13px; font-weight: 500; }
     </style>
   </head>
   <body>
-    <div class="card">
+    <div id="invoice-content" class="card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h1>Xtreme Fitness Gym</h1>
-          <div class="muted">Sec-127, Kharar · +91 70092 73963, +91 76968 89589</div>
+          <div class="muted">SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar · +91 70092 73963, +91 76968 89589</div>
         </div>
         <div class="right">
           <div><b>Invoice</b> ${p.invoiceNo}</div>
@@ -77,10 +80,42 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         <div class="total">${inr(p.amount)}</div>
       </div>
 
-      <a href="javascript:window.print()" class="btn">Print</a>
+      <div class="note-box">
+        Note: Fee is non-refundable and non-adjustable.
+      </div>
+
+      <div class="no-print" style="margin-top:24px; display: flex; gap: 8px;">
+        <button onclick="window.print()" class="btn">Print</button>
+        <button onclick="downloadPDF()" class="btn btn-outline">Download PDF</button>
+      </div>
+      
       ${downloadTip}
       <div class="muted" style="margin-top:24px">Thank you for training with us at Xtreme Fitness!</div>
     </div>
+
+    <script>
+      function downloadPDF() {
+        const element = document.getElementById('invoice-content');
+        const buttons = element.querySelector('.no-print');
+        
+        // Hide elements for PDF
+        buttons.style.display = 'none';
+        
+        const opt = {
+          margin: 0.5,
+          filename: 'Xtreme-Invoice-${p.invoiceNo}.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        
+        return html2pdf().set(opt).from(element).save().then(() => {
+          buttons.style.display = 'flex';
+        });
+      }
+
+      ${req.nextUrl.searchParams.get("auto") === "1" ? "window.onload = downloadPDF;" : ""}
+    </script>
   </body>
 </html>`;
 

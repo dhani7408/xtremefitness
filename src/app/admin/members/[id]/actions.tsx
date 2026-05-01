@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { inr, paymentInvoiceHref, paymentTypeLabel } from "@/lib/utils";
+import InvoiceDownloadLink from "@/components/admin/InvoiceDownloadLink";
 
 type PlanRef = { name: string };
 type SubRow = {
   id: string;
+  startDate: string;
   endDate: string;
   amount: number;
   amountPaid: number;
@@ -35,7 +37,10 @@ export default function MemberActions({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const [payBanner, setPayBanner] = useState<{ paymentId: string; payType: string } | null>(null);
+  const [payBanner, setPayBanner] = useState<{ paymentId: string; payType: string; invoiceNo: string } | null>(null);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
 
   const now = useMemo(() => new Date(), []);
 
@@ -118,12 +123,28 @@ export default function MemberActions({
     });
     setBusy(null);
     if (res.ok) {
-      const j = (await res.json()) as { id: string; payType: string };
-      setPayBanner({ paymentId: j.id, payType: j.payType });
+      const j = (await res.json()) as { id: string; payType: string; invoiceNo: string };
+      setPayBanner({ paymentId: j.id, payType: j.payType, invoiceNo: j.invoiceNo });
       router.refresh();
     } else {
       const j = await res.json().catch(() => ({}));
       alert((j as { error?: string }).error || "Payment failed");
+    }
+  }
+
+  async function saveDates(subId: string) {
+    setBusy("edit-sub");
+    const res = await fetch(`/api/subscriptions/${subId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startDate: editStart, endDate: editEnd }),
+    });
+    setBusy(null);
+    if (res.ok) {
+      setEditingSubId(null);
+      router.refresh();
+    } else {
+      alert("Failed to update dates");
     }
   }
 
@@ -137,13 +158,74 @@ export default function MemberActions({
           <ul className="space-y-2 text-sm">
             {activeSubs.map((s) => {
               const due = roundMoney(s.amount - s.amountPaid);
+              const isEditing = editingSubId === s.id;
+
               return (
                 <li key={s.id} className="rounded-lg border border-black/5 bg-gray-50 px-3 py-2">
-                  <div className="font-medium text-ink-900">{s.plan.name}</div>
-                  <div className="text-ink-700">
-                    Valid through {new Date(s.endDate).toLocaleDateString("en-IN")} · Paid {inr(s.amountPaid)} /{" "}
-                    {inr(s.amount)}
+                  <div className="flex items-start justify-between">
+                    <div className="font-medium text-ink-900">{s.plan.name}</div>
+                    {isSuperUser && !isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSubId(s.id);
+                          setEditStart(new Date(s.startDate).toISOString().slice(0, 10));
+                          setEditEnd(new Date(s.endDate).toISOString().slice(0, 10));
+                        }}
+                        className="text-xs font-semibold text-brand hover:underline"
+                      >
+                        Edit dates
+                      </button>
+                    )}
                   </div>
+
+                  {isEditing ? (
+                    <div className="mt-2 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] uppercase text-ink-700">Start Date</label>
+                          <input
+                            type="date"
+                            className="input text-xs py-1 h-8"
+                            value={editStart}
+                            onChange={(e) => setEditStart(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase text-ink-700">End Date</label>
+                          <input
+                            type="date"
+                            className="input text-xs py-1 h-8"
+                            value={editEnd}
+                            onChange={(e) => setEditEnd(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={busy === "edit-sub"}
+                          onClick={() => saveDates(s.id)}
+                          className="btn btn-primary text-xs py-1 h-8"
+                        >
+                          {busy === "edit-sub" ? "..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingSubId(null)}
+                          className="btn btn-outline text-xs py-1 h-8"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-ink-700">
+                      Valid {new Date(s.startDate).toLocaleDateString("en-IN")} —{" "}
+                      {new Date(s.endDate).toLocaleDateString("en-IN")}
+                      <br />
+                      Paid {inr(s.amountPaid)} / {inr(s.amount)}
+                    </div>
+                  )}
+
                   {due > 0.001 ? (
                     <div className="mt-1 font-semibold text-brand">Due on this plan: {inr(due)}</div>
                   ) : (
@@ -285,11 +367,9 @@ export default function MemberActions({
               Open
             </Link>
             {" · "}
-            <Link className="font-semibold text-brand hover:underline" href={paymentInvoiceHref(payBanner.paymentId, "download")}>
-              Download invoice
-            </Link>
+            <InvoiceDownloadLink paymentId={payBanner.paymentId} invoiceNo={payBanner.invoiceNo} />
             <span className="mt-1 block text-xs text-green-900/80">
-              Download saves an HTML file; open it and use Print → Save as PDF for a PDF copy.
+              Generating PDF directly from the browser for a faster experience.
             </span>
           </div>
         )}

@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import MemberActions from "./actions";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { getRoleFromSession, isManager, isSuperAdmin } from "@/lib/roles";
+import InvoiceDownloadLink from "@/components/admin/InvoiceDownloadLink";
 
 export const dynamic = "force-dynamic";
 
@@ -216,9 +217,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
                       >
                         Open
                       </Link>
-                      <Link className="font-semibold text-brand hover:underline" href={paymentInvoiceHref(p.id, "download")}>
-                        Download
-                      </Link>
+                      <InvoiceDownloadLink paymentId={p.id} invoiceNo={p.invoiceNo} />
                       {!manager && (
                         <DeleteButton
                           endpoint={`/api/payments/${p.id}`}
