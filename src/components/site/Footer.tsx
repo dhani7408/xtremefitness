@@ -11,7 +11,7 @@ export default function Footer() {
             XTREME<span className="text-brand">FITNESS</span>
           </div>
           <p className="text-sm leading-6">
-            Premium unisex gym in Sector 115, Mohali. Modern equipment, certified trainers, and group classes.
+            Premium unisex gym in SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar. Modern equipment, certified trainers, and group classes.
           </p>
         </div>
         <div>
@@ -27,8 +27,8 @@ export default function Footer() {
         <div>
           <h4 className="mb-3 font-semibold text-white">Contact</h4>
           <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-brand" /> SCF 5D, 2nd Floor, SBP City Square, Sector 115, Mohali - 140307</li>
-            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-brand" /> +91 98765 43210</li>
+            <li className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-brand" /> SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar</li>
+            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-brand" /> +91 70092 73963, +91 76968 89589</li>
             <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-brand" /> 5:00 AM — 10:00 PM</li>
           </ul>
         </div>

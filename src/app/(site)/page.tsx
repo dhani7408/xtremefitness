@@ -29,7 +29,7 @@ export default async function HomePage() {
   const testimonials = [
     {
       name: "Karan Mehta",
-      text: "Best gym in Sector 115. Equipment is top notch and the trainers actually care about your form and progress.",
+      text: "Best gym in Sec-127. Equipment is top notch and the trainers actually care about your form and progress.",
       role: "Member since 2023",
     },
     {
@@ -269,7 +269,7 @@ export default async function HomePage() {
               Ready to become your strongest self?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-white/80">
-              Book a free trial today and see why Xtreme Fitness is Mohali&apos;s favourite gym.
+              Book a free trial today and see why Xtreme Fitness is Kharar&apos;s favourite gym.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/contact" className="btn btn-primary bg-white text-ink-900 hover:bg-white/90 shadow-glow">

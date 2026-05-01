@@ -55,7 +55,7 @@ export default function ParallaxHero() {
           </span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80">
-          Mohali&apos;s premium unisex gym in Sector 115. Modern equipment, certified trainers,
+          Kharar&apos;s premium unisex gym in SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar. Modern equipment, certified trainers,
           fingerprint secured access, and group classes that actually move you.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">

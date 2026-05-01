@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <h1>Xtreme Fitness Gym</h1>
-          <div class="muted">Sector 115, Mohali · +91 98765 43210</div>
+          <div class="muted">Sec-127, Kharar · +91 70092 73963, +91 76968 89589</div>
         </div>
         <div class="right">
           <div><b>Invoice</b> ${p.invoiceNo}</div>

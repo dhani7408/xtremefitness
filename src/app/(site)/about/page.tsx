@@ -16,7 +16,7 @@ export default function AboutPage() {
     <>
       <PageHero
         title="About Xtreme"
-        subtitle="Mohali's premium unisex gym in Sector 115 — built around real results and a real community."
+        subtitle="Kharar's premium unisex gym in SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar — built around real results and a real community."
         image="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=1800&auto=format&fit=crop"
       />
 
@@ -42,8 +42,8 @@ export default function AboutPage() {
                 More than a gym — a fitness <span className="text-brand">movement.</span>
               </h2>
               <p className="mt-4 text-ink-700">
-                Founded by <b>Bikramjeet</b> and <b>Sunit Kumar</b>, Xtreme Fitness was born from a simple idea:
-                Mohali deserves a world-class gym that welcomes everyone — from first-timers to athletes.
+                Founded by <b>Vikramjeet singh kamboj</b> and <b>Sunit Kumar</b>, Xtreme Fitness was born from a simple idea:
+                Kharar deserves a world-class gym that welcomes everyone — from first-timers to athletes.
               </p>
               <p className="mt-4 text-ink-700">
                 Today, we combine imported strength and cardio equipment with certified trainers and group

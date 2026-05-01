@@ -48,10 +48,10 @@ export default function ContactPage() {
             <ul className="mt-8 space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-5 w-5 text-brand" />
-                <span>SCF 5D, 2nd Floor, SBP City Square, Sector 115, Kharar Landran Road, Opposite Casa Home, Mohali - 140307, Punjab</span>
+                <span>SCO-5D, 2nd Floor, City Square, Sec-127, Sante Majra, Kharar, Punjab</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="h-5 w-5 text-brand" /> +91 98765 43210
+                <Phone className="h-5 w-5 text-brand" /> +91 70092 73963, +91 76968 89589
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-brand" /> info@xtremefitness.in

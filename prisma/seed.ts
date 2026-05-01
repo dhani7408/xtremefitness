@@ -52,14 +52,14 @@ async function main() {
   const team = [
     {
       employeeCode: "XF-O001",
-      firstName: "Bikramjeet",
+      firstName: "Vikramjeet singh kamboj",
       lastName: "",
       phone: "9876500001",
       role: "OWNER",
       salary: 0,
       photoUrl:
         "https://images.unsplash.com/photo-1567013127542-490d757e51fc?q=80&w=800&auto=format&fit=crop",
-      bio: "Co-founder of Xtreme Fitness. Passionate about building a world-class fitness community in Mohali.",
+      bio: "Co-founder of Xtreme Fitness. Passionate about building a world-class fitness community in Kharar.",
     },
     {
       employeeCode: "XF-O002",

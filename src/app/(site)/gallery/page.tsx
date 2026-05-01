@@ -23,7 +23,7 @@ export default async function GalleryPage() {
       >
         <div className="section text-center">
           <h1 className="font-display text-5xl font-extrabold md:text-6xl">Gallery</h1>
-          <p className="mt-3 text-white/80">A look inside Xtreme Fitness Gym, Sector 115 Mohali.</p>
+          <p className="mt-3 text-white/80">A look inside Xtreme Fitness Gym, Sec-127 Kharar.</p>
         </div>
       </section>
 
