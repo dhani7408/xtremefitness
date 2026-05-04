@@ -38,7 +38,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .total{font-size:20px;font-weight:800;color:#DC2626}
       .btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#DC2626;color:#fff;text-decoration:none;border-radius:6px;border:none;cursor:pointer;font-size:14px;font-weight:600}
       .btn-outline{background:#fff;color:#DC2626;border:1px solid #DC2626;margin-left:8px}
-      @media print { .no-print{display:none !important} }
+      @media print {
+        .no-print { display: none !important; }
+        body { margin: 0 !important; padding: 12px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .card { max-width: 100% !important; border: 1px solid #ddd !important; page-break-inside: avoid; }
+        @page { margin: 12mm; size: auto; }
+      }
       .note-box { margin-top: 24px; padding: 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; font-size: 13px; font-weight: 500; }
     </style>
   </head>
@@ -99,18 +104,34 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         const buttons = element.querySelector('.no-print');
         
         // Hide elements for PDF
-        buttons.style.display = 'none';
+        if (buttons) buttons.style.display = 'none';
+        
+        // html2canvas clips to the viewport by default; capture full invoice height/width
+        // so PDF matches whether opened in a small tab, mobile, or a tall iframe.
+        const w = Math.max(element.scrollWidth, element.offsetWidth);
+        const h = Math.max(element.scrollHeight, element.offsetHeight);
         
         const opt = {
           margin: 0.5,
           filename: 'Xtreme-Invoice-${p.invoiceNo}.pdf',
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            width: w,
+            height: h,
+            windowWidth: w,
+            windowHeight: h
+          },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
         
         return html2pdf().set(opt).from(element).save().then(() => {
-          buttons.style.display = 'flex';
+          if (buttons) buttons.style.display = 'flex';
         });
       }
 
