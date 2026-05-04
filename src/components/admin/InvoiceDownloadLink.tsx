@@ -23,7 +23,7 @@ export default function InvoiceDownloadLink({
     iframe.style.left = "-9999px";
     iframe.style.top = "0";
     iframe.style.width = "1024px";
-    iframe.style.height = "1024px";
+    iframe.style.height = "1200px";
     iframe.style.visibility = "hidden";
     
     iframe.src = `/api/invoice/${paymentId}?auto=1`;
@@ -33,7 +33,7 @@ export default function InvoiceDownloadLink({
     setTimeout(() => {
       document.body.removeChild(iframe);
       setBusy(false);
-    }, 4000);
+    }, 10000);
   }
 
   return (
