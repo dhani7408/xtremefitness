@@ -32,7 +32,7 @@ export default function Footer() {
             <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-brand" /> 5:00 AM — 10:00 PM</li>
           </ul>
         </div>
-        <div>
+        <div> 
           <h4 className="mb-3 font-semibold text-white">Follow</h4>
           <div className="flex gap-3">
             <a
@@ -57,7 +57,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
-        © {new Date().getFullYear()} Xtreme Fitness Gym. All rights reserved.
+        © {new Date().getFullYear()} Xtreme Fitness Gym . All rights reserved.
       </div>
     </footer>
   );
