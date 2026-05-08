@@ -35,8 +35,24 @@ export default function Footer() {
         <div>
           <h4 className="mb-3 font-semibold text-white">Follow</h4>
           <div className="flex gap-3">
-            <a href="#" className="rounded-full bg-white/10 p-2 hover:bg-brand"><Instagram className="h-4 w-4" /></a>
-            <a href="#" className="rounded-full bg-white/10 p-2 hover:bg-brand"><Facebook className="h-4 w-4" /></a>
+            <a
+              href="https://www.instagram.com/xtremefitnesskhararofficial?utm_source=qr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit our Instagram"
+              className="rounded-full bg-white/10 p-2 hover:bg-brand"
+            >
+              <Instagram className="h-4 w-4" />
+            </a>
+            <a
+              href="https://www.facebook.com/share/1Cxfizg4hQ/?mibextid=wwXIfr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit our Facebook"
+              className="rounded-full bg-white/10 p-2 hover:bg-brand"
+            >
+              <Facebook className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </div>
