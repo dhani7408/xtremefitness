@@ -25,12 +25,20 @@ export async function POST(req: NextRequest) {
   if (!body.planId || typeof body.planId !== "string") {
     return NextResponse.json({ error: "Select a membership package" }, { status: 400 });
   }
-  let initialPayment: { id: string; invoiceNo: string; payType: string } | null = null;
-  let receiptNotify: { phone: string; memberId: string; firstName: string; amount: number; paymentId: string } | null =
-    null;
+
+  type ReceiptPayload = {
+    phone: string;
+    memberId: string;
+    firstName: string;
+    amount: number;
+    paymentId: string;
+  };
 
   try {
-    const member = await prisma.$transaction(async (tx) => {
+    const { member, initialPayment, receiptNotify } = await prisma.$transaction(async (tx) => {
+      let initialPayment: { id: string; invoiceNo: string; payType: string } | null = null;
+      let receiptNotify: ReceiptPayload | null = null;
+
       const plan = await tx.plan.findFirst({
         where: { id: body.planId, deletedAt: null, active: true },
       });
@@ -120,7 +128,7 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      return m;
+      return { member: m, initialPayment, receiptNotify };
     });
 
     if (receiptNotify) {
