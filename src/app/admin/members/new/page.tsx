@@ -67,7 +67,7 @@ export default function NewMemberPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <h1 className="mb-4 text-2xl font-bold">Add Member</h1>
       {err && <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{err}</div>}
       <form onSubmit={onSubmit} className="card grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
