@@ -1,8 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { inr } from "@/lib/utils";
 
 type PlanRow = { id: string; name: string; months: number; price: number; active: boolean };
+
+function roundMoney(n: number) {
+  return Math.round(n * 100) / 100;
+}
 
 export default function NewMemberPage() {
   const router = useRouter();
@@ -39,10 +44,18 @@ export default function NewMemberPage() {
     setErr(null);
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const raw = Object.fromEntries(fd.entries()) as Record<string, string>;
+    const initialPaymentAmount = (raw.initialPaymentAmount ?? "").toString().trim();
+    const payload: Record<string, string> = { ...raw };
+    if (!initialPaymentAmount) {
+      delete payload.initialPaymentAmount;
+      delete payload.initialPaymentMethod;
+      delete payload.initialPaymentNote;
+    }
     const res = await fetch("/api/members", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(fd.entries())),
+      body: JSON.stringify(payload),
     });
     setLoading(false);
     if (res.ok) {
@@ -86,6 +99,58 @@ export default function NewMemberPage() {
             </p>
           )}
         </div>
+
+        {selectedPlan && (
+          <div className="md:col-span-2 rounded-lg border border-ink-200/80 bg-ink-50/50 p-4">
+            <h2 className="mb-1 text-sm font-semibold text-ink-900">Initial payment (optional)</h2>
+            <p className="mb-3 text-xs text-ink-700">
+              Record a payment for this package now. An invoice is created and the receipt message is sent like{" "}
+              <strong>Record payment</strong> on the member profile. Leave amount blank to add the member only.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="label">Amount (₹)</label>
+                <input
+                  name="initialPaymentAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={selectedPlan.price}
+                  className="input"
+                  placeholder="e.g. full fee or partial"
+                />
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-ink-700">Package fee: {inr(roundMoney(selectedPlan.price))}</span>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-brand hover:underline"
+                    onClick={(e) => {
+                      const form = e.currentTarget.closest("form");
+                      const inp = form?.querySelector<HTMLInputElement>('input[name="initialPaymentAmount"]');
+                      if (inp) inp.value = String(roundMoney(selectedPlan.price));
+                    }}
+                  >
+                    Fill full fee
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="label">Method</label>
+                <select name="initialPaymentMethod" className="input" defaultValue="UPI">
+                  <option value="CASH">CASH</option>
+                  <option value="UPI">UPI</option>
+                  <option value="CARD">CARD</option>
+                  <option value="BANK">BANK</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Note (optional)</label>
+                <input name="initialPaymentNote" className="input" placeholder="e.g. joining fee" />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div><label className="label">First Name *</label><input required name="firstName" className="input" /></div>
         <div><label className="label">Last Name</label><input name="lastName" className="input" /></div>
         <div><label className="label">Phone *</label><input required name="phone" className="input" /></div>
