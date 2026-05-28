@@ -16,27 +16,15 @@ export default function NewMemberPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [trainers, setTrainers] = useState<{id: string; firstName: string; lastName: string; role: string; status: string}[]>([]);
-  const [ptEnabled, setPtEnabled] = useState(false);
-  const [ptAmount, setPtAmount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [res, teamRes] = await Promise.all([
-          fetch("/api/plans"),
-          fetch("/api/team"),
-        ]);
-        
+        const res = await fetch("/api/plans");
         if (!cancelled && res.ok) {
           const data = (await res.json()) as PlanRow[];
           if (Array.isArray(data)) setPlans(data.filter((p) => p.active));
-        }
-
-        if (!cancelled && teamRes.ok) {
-          const tData = await teamRes.json();
-          if (Array.isArray(tData)) setTrainers(tData.filter((t: any) => t.role === "TRAINER" && t.status === "ACTIVE"));
         }
       } catch {
         if (!cancelled) setErr("Could not load packages");
@@ -50,7 +38,7 @@ export default function NewMemberPage() {
   }, []);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-  const totalFee = (selectedPlan?.price || 0) + (ptEnabled ? ptAmount : 0);
+  const totalFee = selectedPlan?.price || 0;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -133,7 +121,7 @@ export default function NewMemberPage() {
                   placeholder="e.g. full fee or partial"
                 />
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-ink-700">Total fee: {inr(roundMoney(totalFee))}</span>
+                  <span className="text-xs text-ink-700">Package fee: {inr(roundMoney(totalFee))}</span>
                   <button
                     type="button"
                     className="text-xs font-semibold text-brand hover:underline"
@@ -189,49 +177,6 @@ export default function NewMemberPage() {
           </select>
         </div>
         <div className="md:col-span-2"><label className="label">ESSL Fingerprint ID</label><input name="fingerprintId" className="input" placeholder="PIN enrolled on the ESSL device" /></div>
-        
-        <div className="md:col-span-2 rounded-lg border border-brand/20 bg-brand/5 p-4 mt-2">
-          <div className="flex items-center gap-2 mb-3">
-            <input type="checkbox" id="ptEnabled" checked={ptEnabled} onChange={(e) => setPtEnabled(e.target.checked)} className="h-4 w-4" />
-            <label htmlFor="ptEnabled" className="font-semibold text-ink-900">Add Personal Training (Optional)</label>
-          </div>
-          {ptEnabled && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div>
-                <label className="label">Trainer *</label>
-                <select name="ptTrainerId" required={ptEnabled} className="input">
-                  <option value="">Select Trainer</option>
-                  {trainers.map((t) => <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">Total Sessions *</label>
-                <input name="ptSessions" type="number" min="1" required={ptEnabled} className="input" defaultValue="12" />
-              </div>
-              <div>
-                <label className="label">Duration (Months) *</label>
-                <input name="ptMonths" type="number" min="1" required={ptEnabled} className="input" defaultValue="1" />
-              </div>
-              <div>
-                <label className="label">PT Fee (₹) *</label>
-                <input 
-                  name="ptAmount" 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  required={ptEnabled} 
-                  className="input" 
-                  value={ptAmount || ""}
-                  onChange={(e) => setPtAmount(Number(e.target.value) || 0)}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="label">PT Note</label>
-                <input name="ptNotes" className="input" placeholder="Any specific goals or notes..." />
-              </div>
-            </div>
-          )}
-        </div>
 
         <div className="md:col-span-2 flex justify-end gap-2">
           <button type="button" onClick={() => router.back()} className="btn btn-outline">Cancel</button>

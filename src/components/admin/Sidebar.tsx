@@ -15,7 +15,6 @@ import {
   Image as ImageIcon,
   Banknote,
   X,
-  Activity,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { normalizeAdminRole } from "@/lib/roles";
@@ -26,7 +25,6 @@ const allItems = [
   { href: "/admin/pending-payments", label: "Pending payments", icon: Banknote },
   { href: "/admin/team", label: "Team", icon: UserCog, superOnly: true },
   { href: "/admin/plans", label: "Plans", icon: Package },
-  { href: "/admin/personal-training", label: "Personal Training", icon: Activity },
   { href: "/admin/finance", label: "Finance", icon: Wallet, superOnly: true },
   { href: "/admin/attendance", label: "Attendance", icon: Fingerprint, superOnly: true },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon, superOnly: true },

@@ -29,33 +29,29 @@ export async function POST(req: NextRequest) {
   const member = await prisma.member.findUnique({ where: { id: b.memberId } });
   if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
 
-  let sub: any = null;
-  let pt: any = null;
-  let due = 0;
-  let targetName = "";
+  type SubWithPlan = NonNullable<
+    Awaited<
+      ReturnType<
+        typeof prisma.subscription.findFirst<{ include: { plan: true } }>
+      >
+    >
+  >;
+  let sub: SubWithPlan | null = null;
 
-  if (typeof b.target === "string" && b.target) {
-    const [type, id] = b.target.split(":");
-    if (type === "SUB") {
-      sub = await prisma.subscription.findFirst({
-        where: { id, memberId: b.memberId },
-        include: { plan: true },
-      });
-    } else if (type === "PT") {
-      pt = await prisma.personalTraining.findFirst({
-        where: { id, memberId: b.memberId },
-        include: { trainer: true },
-      });
-    }
-  } else if (typeof b.subscriptionId === "string" && b.subscriptionId) {
+  if (typeof b.subscriptionId === "string" && b.subscriptionId) {
     sub = await prisma.subscription.findFirst({
       where: { id: b.subscriptionId, memberId: b.memberId },
       include: { plan: true },
     });
+  } else if (typeof b.target === "string" && b.target.startsWith("SUB:")) {
+    const id = b.target.slice(4);
+    sub = await prisma.subscription.findFirst({
+      where: { id, memberId: b.memberId },
+      include: { plan: true },
+    });
   }
 
-  // Fallback to auto-select if nothing passed (legacy support)
-  if (!sub && !pt) {
+  if (!sub) {
     const candidates = await prisma.subscription.findMany({
       where: { memberId: b.memberId },
       orderBy: { endDate: "asc" },
@@ -64,18 +60,15 @@ export async function POST(req: NextRequest) {
     sub = candidates.find((s) => roundMoney(s.amount - s.amountPaid) > 0) ?? null;
   }
 
-  if (sub) {
-    due = roundMoney(sub.amount - sub.amountPaid);
-    targetName = sub.plan.name;
-  } else if (pt) {
-    due = roundMoney(pt.amount - pt.amountPaid);
-    targetName = `Personal Training`;
-  } else {
+  if (!sub) {
     return NextResponse.json(
       { error: "No package found, or none has a balance due." },
       { status: 400 }
     );
   }
+
+  const due = roundMoney(sub.amount - sub.amountPaid);
+  const targetName = sub.plan.name;
 
   if (due <= 0) {
     return NextResponse.json({ error: "This package is already fully paid." }, { status: 400 });
@@ -93,8 +86,7 @@ export async function POST(req: NextRequest) {
   const payment = await prisma.payment.create({
     data: {
       memberId: b.memberId,
-      subscriptionId: sub ? sub.id : null,
-      personalTrainingId: pt ? pt.id : null,
+      subscriptionId: sub.id,
       amount,
       method: typeof b.method === "string" ? b.method : "CASH",
       payType,
@@ -103,19 +95,11 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (sub) {
-    await prisma.subscription.update({
-      where: { id: sub.id },
-      data: { amountPaid: roundMoney(sub.amountPaid + amount) },
-    });
-  } else if (pt) {
-    await prisma.personalTraining.update({
-      where: { id: pt.id },
-      data: { amountPaid: roundMoney(pt.amountPaid + amount) },
-    });
-  }
+  await prisma.subscription.update({
+    where: { id: sub.id },
+    data: { amountPaid: roundMoney(sub.amountPaid + amount) },
+  });
 
-  // Trigger receipt WhatsApp message
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const invoiceUrl = `${baseUrl}/api/invoice/${payment.id}`;
   await sendWhatsApp({

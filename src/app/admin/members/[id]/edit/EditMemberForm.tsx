@@ -18,11 +18,10 @@ export type EditMemberInitial = {
   notes: string | null;
 };
 
-export default function EditMemberForm({ member, trainers }: { member: EditMemberInitial; trainers: any[] }) {
+export default function EditMemberForm({ member }: { member: EditMemberInitial }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [ptEnabled, setPtEnabled] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,46 +75,6 @@ export default function EditMemberForm({ member, trainers }: { member: EditMembe
         </div>
         <div className="md:col-span-2"><label className="label">ESSL Fingerprint ID</label><input name="fingerprintId" className="input" placeholder="PIN enrolled on the ESSL device" defaultValue={member.fingerprintId ?? ""} /></div>
         <div className="md:col-span-2"><label className="label">Notes</label><textarea name="notes" className="input min-h-[88px]" rows={3} defaultValue={member.notes ?? ""} /></div>
-        
-        <div className="md:col-span-2 border-t border-black/10 pt-4 mt-2">
-          <label className="flex items-center gap-2 font-bold mb-4 cursor-pointer select-none">
-            <input 
-              type="checkbox" 
-              checked={ptEnabled} 
-              onChange={(e) => setPtEnabled(e.target.checked)} 
-              className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
-            />
-            Add Personal Training (Optional)
-          </label>
-
-          {ptEnabled && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 bg-brand/5 p-4 rounded-lg border border-brand/20">
-              <div>
-                <label className="label">Trainer *</label>
-                <select name="ptTrainerId" required={ptEnabled} className="input">
-                  <option value="">Select Trainer</option>
-                  {trainers.map((t) => <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">Total Sessions *</label>
-                <input type="number" name="ptSessions" min="1" required={ptEnabled} className="input" defaultValue={12} />
-              </div>
-              <div>
-                <label className="label">PT Fee (₹) *</label>
-                <input type="number" step="0.01" name="ptAmount" required={ptEnabled} className="input" min="0" />
-              </div>
-              <div>
-                <label className="label">Months Valid *</label>
-                <input type="number" name="ptMonths" min="1" required={ptEnabled} className="input" defaultValue={1} />
-              </div>
-              <div className="md:col-span-2">
-                <label className="label">PT Note</label>
-                <input name="ptNotes" className="input" placeholder="E.g., weight loss program, focus on cardio" />
-              </div>
-            </div>
-          )}
-        </div>
 
         <div className="md:col-span-2 flex justify-end gap-2 mt-4">
           <button type="button" onClick={() => router.back()} className="btn btn-outline">Cancel</button>

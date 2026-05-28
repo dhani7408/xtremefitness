@@ -16,20 +16,10 @@ type SubRow = {
   plan: PlanRef;
 };
 
-type PtRow = {
-  id: string;
-  startDate: string;
-  endDate: string;
-  amount: number;
-  amountPaid: number;
-  trainer: { firstName: string; lastName: string };
-};
-
 type MemberRow = {
   id: string;
   status: string;
   subscriptions: SubRow[];
-  personalTraining?: PtRow[];
 };
 
 function roundMoney(n: number) {
@@ -63,32 +53,33 @@ export default function MemberActions({
     [member.subscriptions, now]
   );
 
-  const dues = useMemo(() => {
-    const s = member.subscriptions
-      .filter((sub) => roundMoney(sub.amount - sub.amountPaid) > 0.001)
-      .map(sub => ({ type: "SUB", id: sub.id, name: sub.plan.name, amount: sub.amount, amountPaid: sub.amountPaid }));
-    
-    const p = (member.personalTraining || [])
-      .filter((pt) => roundMoney(pt.amount - pt.amountPaid) > 0.001)
-      .map(pt => ({ type: "PT", id: pt.id, name: `PT (${pt.trainer.firstName})`, amount: pt.amount, amountPaid: pt.amountPaid }));
-    
-    return [...s, ...p];
-  }, [member.subscriptions, member.personalTraining]);
+  const dues = useMemo(
+    () =>
+      member.subscriptions
+        .filter((sub) => roundMoney(sub.amount - sub.amountPaid) > 0.001)
+        .map((sub) => ({
+          id: sub.id,
+          name: sub.plan.name,
+          amount: sub.amount,
+          amountPaid: sub.amountPaid,
+        })),
+    [member.subscriptions]
+  );
 
   const totalDue = useMemo(
     () => dues.reduce((acc, d) => acc + roundMoney(Math.max(0, d.amount - d.amountPaid)), 0),
     [dues]
   );
 
-  const [targetId, setTargetId] = useState("");
+  const [subscriptionId, setSubscriptionId] = useState("");
   useEffect(() => {
-    if (dues.length && !dues.some((d) => `${d.type}:${d.id}` === targetId)) {
-      setTargetId(`${dues[0].type}:${dues[0].id}`);
+    if (dues.length && !dues.some((d) => d.id === subscriptionId)) {
+      setSubscriptionId(dues[0].id);
     }
-    if (!dues.length) setTargetId("");
-  }, [dues, targetId]);
+    if (!dues.length) setSubscriptionId("");
+  }, [dues, subscriptionId]);
 
-  const selectedDue = dues.find((d) => `${d.type}:${d.id}` === targetId);
+  const selectedDue = dues.find((d) => d.id === subscriptionId);
   const dueSelected = selectedDue ? roundMoney(selectedDue.amount - selectedDue.amountPaid) : 0;
 
   async function toggleStatus() {
@@ -312,14 +303,14 @@ export default function MemberActions({
             <div>
               <label className="label">Apply payment to</label>
               <select
-                name="target"
+                name="subscriptionId"
                 required
                 className="input"
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value)}
+                value={subscriptionId}
+                onChange={(e) => setSubscriptionId(e.target.value)}
               >
                 {dues.map((d) => (
-                  <option key={`${d.type}:${d.id}`} value={`${d.type}:${d.id}`}>
+                  <option key={d.id} value={d.id}>
                     {d.name} — due {inr(roundMoney(d.amount - d.amountPaid))}
                   </option>
                 ))}
@@ -328,7 +319,7 @@ export default function MemberActions({
             <div>
               <label className="label">Amount (₹)</label>
               <input
-                key={targetId}
+                key={subscriptionId}
                 name="amount"
                 type="number"
                 step="0.01"

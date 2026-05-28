@@ -9,7 +9,7 @@ function safeInvoiceFilename(invoiceNo: string) {
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const p = await prisma.payment.findUnique({
     where: { id: params.id },
-    include: { member: true, subscription: { include: { plan: true } }, personalTraining: { include: { trainer: true } } },
+    include: { member: true, subscription: { include: { plan: true } } },
   });
   if (!p) return new NextResponse("Not found", { status: 404 });
 
@@ -68,16 +68,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       <table>
         <tr><th>Description</th><th class="right">Amount</th></tr>
         <tr>
-          <td>${p.subscription ? `${p.subscription.plan.name} — membership` : p.personalTraining ? `Personal Training (${p.personalTraining.trainer.firstName})` : "Membership payment"}</td>
+          <td>${p.subscription ? `${p.subscription.plan.name} — membership` : "Membership payment"}</td>
           <td class="right">${inr(p.amount)}</td>
         </tr>
         <tr>
           <td>Start Date</td>
-          <td class="right">${p.subscription ? fmtDate(p.subscription.startDate) : p.personalTraining ? fmtDate(p.personalTraining.startDate) : "N/A"}</td>
+          <td class="right">${p.subscription ? fmtDate(p.subscription.startDate) : "N/A"}</td>
         </tr>
         <tr>
           <td>Expiry Date</td>
-          <td class="right">${p.subscription ? fmtDate(p.subscription.endDate) : p.personalTraining ? fmtDate(p.personalTraining.endDate) : "N/A"}</td>
+          <td class="right">${p.subscription ? fmtDate(p.subscription.endDate) : "N/A"}</td>
         </tr>
         <tr>
           <td>Method</td>
