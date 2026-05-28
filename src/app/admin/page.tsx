@@ -34,8 +34,8 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.member.count({ where: { deletedAt: null } }),
     prisma.member.count({ where: { deletedAt: null, status: "ACTIVE" } }),
-    prisma.subscription.count({ where: { status: "ACTIVE", endDate: { gte: now } } }),
-    prisma.subscription.count({ where: { OR: [{ status: "EXPIRED" }, { endDate: { lt: now } }] } }),
+    prisma.member.count({ where: { deletedAt: null, subscriptions: { some: { status: "ACTIVE", endDate: { gte: now } } } } }),
+    prisma.member.count({ where: { deletedAt: null, subscriptions: { some: { OR: [{ status: "EXPIRED" }, { endDate: { lt: now } }] } } } }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { deletedAt: null, receivedAt: { gte: startOfDay } } }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { deletedAt: null, receivedAt: { gte: startOfMonth } } }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { deletedAt: null, receivedAt: { gte: startOfYear } } }),
@@ -65,14 +65,14 @@ export default async function DashboardPage() {
   const pendingPaymentPlanCount = subsWithBalance.length;
 
   const stats = [
-    { label: "Today's Collection", value: inr(todayCollection._sum.amount || 0), icon: IndianRupee, color: "bg-pink-500" },
-    { label: "Month Collection", value: inr(monthCollection._sum.amount || 0), icon: TrendingUp, color: "bg-indigo-500" },
-    { label: "Year Collection", value: inr(yearCollection._sum.amount || 0), icon: IndianRupee, color: "bg-purple-500" },
-    { label: "Active Members", value: String(activeMembers), icon: Users, color: "bg-amber-500" },
-    { label: "Active Subscriptions", value: String(activeSubs), icon: TrendingUp, color: "bg-emerald-500" },
-    { label: "Expired Subs", value: String(expiredSubs), icon: CircleOff, color: "bg-red-500" },
-    { label: "Today Check-ins", value: String(todayCheckins), icon: Fingerprint, color: "bg-sky-500" },
-    { label: "Total Members", value: String(totalMembers), icon: Users, color: "bg-gray-600" },
+    { label: "Today's Collection", value: inr(todayCollection._sum.amount || 0), icon: IndianRupee, color: "bg-pink-500", href: "/admin/finance?filter=today" },
+    { label: "Month Collection", value: inr(monthCollection._sum.amount || 0), icon: TrendingUp, color: "bg-indigo-500", href: "/admin/finance?filter=month" },
+    { label: "Year Collection", value: inr(yearCollection._sum.amount || 0), icon: IndianRupee, color: "bg-purple-500", href: "/admin/finance?filter=year" },
+    { label: "Active Members", value: String(activeMembers), icon: Users, color: "bg-amber-500", href: "/admin/members?status=ACTIVE" },
+    { label: "Active Subscriptions", value: String(activeSubs), icon: TrendingUp, color: "bg-emerald-500", href: "/admin/members?subStatus=ACTIVE" },
+    { label: "Expired Subs", value: String(expiredSubs), icon: CircleOff, color: "bg-red-500", href: "/admin/members?subStatus=EXPIRED" },
+    { label: "Today Check-ins", value: String(todayCheckins), icon: Fingerprint, color: "bg-sky-500", href: "/admin/attendance?filter=today" },
+    { label: "Total Members", value: String(totalMembers), icon: Users, color: "bg-gray-600", href: "/admin/members" },
   ];
 
   return (
@@ -110,15 +110,24 @@ export default async function DashboardPage() {
       </Link>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="card p-4">
-            <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${s.color} text-white`}>
-              <s.icon className="h-5 w-5" />
+        {stats.map((s) => {
+          const inner = (
+            <div className="card p-4 h-full transition hover:border-brand/30 hover:shadow-md">
+              <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${s.color} text-white`}>
+                <s.icon className="h-5 w-5" />
+              </div>
+              <div className="text-xl font-extrabold">{s.value}</div>
+              <div className="text-xs uppercase tracking-wide text-ink-700">{s.label}</div>
             </div>
-            <div className="text-xl font-extrabold">{s.value}</div>
-            <div className="text-xs uppercase tracking-wide text-ink-700">{s.label}</div>
-          </div>
-        ))}
+          );
+          return s.href ? (
+            <Link href={s.href} key={s.label} className="block">
+              {inner}
+            </Link>
+          ) : (
+            <div key={s.label}>{inner}</div>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

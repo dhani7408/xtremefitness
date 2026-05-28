@@ -27,10 +27,17 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
       payments: {
         where: { deletedAt: null },
         orderBy: { receivedAt: "desc" },
-        include: { subscription: { include: { plan: true } } },
+        include: { 
+          subscription: { include: { plan: true } },
+          personalTraining: { include: { trainer: true } }
+        },
       },
       attendance: { orderBy: { checkIn: "desc" }, take: 15 },
       messages: { orderBy: { createdAt: "desc" }, take: 10 },
+      personalTraining: {
+        include: { trainer: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!member) return notFound();
@@ -121,6 +128,50 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="lg:col-span-2 space-y-6">
+        {member.personalTraining.length > 0 && (
+          <section className="card p-5">
+            <h3 className="mb-3 font-semibold text-brand">Personal Training</h3>
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase text-ink-700">
+                <tr>
+                  <th className="py-2">Trainer</th>
+                  <th>Dates</th>
+                  <th>Sessions</th>
+                  <th>Amount</th>
+                  <th>Due</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {member.personalTraining.map((pt) => {
+                  const due = Math.max(0, pt.amount - pt.amountPaid);
+                  const isExpired = pt.endDate < now || pt.sessions <= pt.used;
+                  return (
+                    <tr key={pt.id}>
+                      <td className="py-2 font-medium">{pt.trainer.firstName} {pt.trainer.lastName}</td>
+                      <td>{fmtDate(pt.startDate)} - {fmtDate(pt.endDate)}</td>
+                      <td>{pt.used} / {pt.sessions}</td>
+                      <td>{inr(pt.amount)}</td>
+                      <td className={due > 0 ? "font-semibold text-red-600" : "text-ink-700"}>{inr(due)}</td>
+                      <td>
+                        <span className={`badge ${!isExpired ? "badge-green" : "badge-red"}`}>
+                          {!isExpired ? "Active" : "Completed"}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <Link href={`/admin/personal-training/${pt.id}`} className="text-brand hover:underline text-xs">
+                          Manage
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </section>
+        )}
+
         <section className="card p-5">
           <h3 className="mb-3 font-semibold">Subscriptions</h3>
           <p className="mb-3 text-xs text-ink-700">
@@ -181,8 +232,9 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             <thead className="text-left text-xs uppercase text-ink-700">
               <tr>
                 <th className="py-2">Invoice</th>
-                <th>Plan</th>
-                <th>Date</th>
+                <th>Package</th>
+                <th>Validity</th>
+                <th>Payment Date</th>
                 <th>Amount</th>
                 <th>Type</th>
                 <th>Method</th>
@@ -193,8 +245,15 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
               {member.payments.map((p) => (
                 <tr key={p.id}>
                   <td className="py-2 font-mono text-xs">{p.invoiceNo}</td>
-                  <td className="max-w-[140px] truncate text-ink-800" title={p.subscription?.plan.name}>
-                    {p.subscription?.plan.name ?? "—"}
+                  <td className="max-w-[140px] truncate text-ink-800" title={p.subscription?.plan.name || "Personal Training"}>
+                    {p.subscription ? p.subscription.plan.name : p.personalTraining ? `PT (${p.personalTraining.trainer.firstName})` : "—"}
+                  </td>
+                  <td className="text-xs text-ink-700">
+                    {p.subscription 
+                      ? `${fmtDate(p.subscription.startDate)} - ${fmtDate(p.subscription.endDate)}`
+                      : p.personalTraining
+                      ? `${fmtDate(p.personalTraining.startDate)} - ${fmtDate(p.personalTraining.endDate)}`
+                      : "—"}
                   </td>
                   <td>{fmtDate(p.receivedAt)}</td>
                   <td>{inr(p.amount)}</td>

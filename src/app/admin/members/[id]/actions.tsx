@@ -16,10 +16,20 @@ type SubRow = {
   plan: PlanRef;
 };
 
+type PtRow = {
+  id: string;
+  startDate: string;
+  endDate: string;
+  amount: number;
+  amountPaid: number;
+  trainer: { firstName: string; lastName: string };
+};
+
 type MemberRow = {
   id: string;
   status: string;
   subscriptions: SubRow[];
+  personalTraining?: PtRow[];
 };
 
 function roundMoney(n: number) {
@@ -53,27 +63,33 @@ export default function MemberActions({
     [member.subscriptions, now]
   );
 
-  const subsWithDue = useMemo(
-    () =>
-      member.subscriptions.filter((s) => roundMoney(s.amount - s.amountPaid) > 0.001),
-    [member.subscriptions]
-  );
+  const dues = useMemo(() => {
+    const s = member.subscriptions
+      .filter((sub) => roundMoney(sub.amount - sub.amountPaid) > 0.001)
+      .map(sub => ({ type: "SUB", id: sub.id, name: sub.plan.name, amount: sub.amount, amountPaid: sub.amountPaid }));
+    
+    const p = (member.personalTraining || [])
+      .filter((pt) => roundMoney(pt.amount - pt.amountPaid) > 0.001)
+      .map(pt => ({ type: "PT", id: pt.id, name: `PT (${pt.trainer.firstName})`, amount: pt.amount, amountPaid: pt.amountPaid }));
+    
+    return [...s, ...p];
+  }, [member.subscriptions, member.personalTraining]);
 
   const totalDue = useMemo(
-    () => member.subscriptions.reduce((acc, s) => acc + roundMoney(Math.max(0, s.amount - s.amountPaid)), 0),
-    [member.subscriptions]
+    () => dues.reduce((acc, d) => acc + roundMoney(Math.max(0, d.amount - d.amountPaid)), 0),
+    [dues]
   );
 
-  const [subId, setSubId] = useState("");
+  const [targetId, setTargetId] = useState("");
   useEffect(() => {
-    if (subsWithDue.length && !subsWithDue.some((s) => s.id === subId)) {
-      setSubId(subsWithDue[0].id);
+    if (dues.length && !dues.some((d) => `${d.type}:${d.id}` === targetId)) {
+      setTargetId(`${dues[0].type}:${dues[0].id}`);
     }
-    if (!subsWithDue.length) setSubId("");
-  }, [subsWithDue, subId]);
+    if (!dues.length) setTargetId("");
+  }, [dues, targetId]);
 
-  const selected = member.subscriptions.find((s) => s.id === subId);
-  const dueSelected = selected ? roundMoney(selected.amount - selected.amountPaid) : 0;
+  const selectedDue = dues.find((d) => `${d.type}:${d.id}` === targetId);
+  const dueSelected = selectedDue ? roundMoney(selectedDue.amount - selectedDue.amountPaid) : 0;
 
   async function toggleStatus() {
     setBusy("status");
@@ -289,22 +305,22 @@ export default function MemberActions({
           remaining amount, it is stored as a <strong>full</strong> payment; otherwise <strong>partial</strong>. Each
           entry gets a printable invoice.
         </p>
-        {subsWithDue.length === 0 ? (
-          <p className="text-sm text-ink-700">No outstanding balance on any subscription.</p>
+        {dues.length === 0 ? (
+          <p className="text-sm text-ink-700">No outstanding balance.</p>
         ) : (
           <>
             <div>
               <label className="label">Apply payment to</label>
               <select
-                name="subscriptionId"
+                name="target"
                 required
                 className="input"
-                value={subId}
-                onChange={(e) => setSubId(e.target.value)}
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
               >
-                {subsWithDue.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.plan.name} — due {inr(roundMoney(s.amount - s.amountPaid))}
+                {dues.map((d) => (
+                  <option key={`${d.type}:${d.id}`} value={`${d.type}:${d.id}`}>
+                    {d.name} — due {inr(roundMoney(d.amount - d.amountPaid))}
                   </option>
                 ))}
               </select>
@@ -312,7 +328,7 @@ export default function MemberActions({
             <div>
               <label className="label">Amount (₹)</label>
               <input
-                key={subId}
+                key={targetId}
                 name="amount"
                 type="number"
                 step="0.01"

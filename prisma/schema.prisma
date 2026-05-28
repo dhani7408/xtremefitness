@@ -44,6 +44,7 @@ model Member {
   payments      Payment[]
   attendance    Attendance[]
   messages      MessageLog[]
+  personalTraining PersonalTraining[]
 }
 
 model Plan {
@@ -75,10 +76,11 @@ model Subscription {
 }
 
 model Payment {
-  id             String   @id @default(cuid())
-  memberId       String
-  subscriptionId String?
-  amount         Float
+  id                 String   @id @default(cuid())
+  memberId           String
+  subscriptionId     String?
+  personalTrainingId String?
+  amount             Float
   method         String   @default("CASH") // CASH | UPI | CARD | BANK
   /// FULL = paid entire balance due on the subscription at time of payment; PARTIAL otherwise
   payType        String   @default("PARTIAL") // FULL | PARTIAL
@@ -87,8 +89,9 @@ model Payment {
   invoiceNo      String   @unique
   deletedAt      DateTime?
 
-  member       Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  member           Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subscription     Subscription?     @relation(fields: [subscriptionId], references: [id])
+  personalTraining PersonalTraining? @relation(fields: [personalTrainingId], references: [id])
 }
 
 model Expense {
@@ -121,6 +124,7 @@ model TeamMember {
 
   attendance Attendance[]
   adminLogin  AdminUser?
+  personalTraining PersonalTraining[]
 }
 
 model Attendance {
@@ -169,4 +173,24 @@ model GalleryImage {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   deletedAt DateTime?
+}
+
+model PersonalTraining {
+  id         String   @id @default(cuid())
+  memberId   String
+  trainerId  String
+  startDate  DateTime
+  endDate    DateTime
+  sessions   Int      @default(0) // Total PT sessions purchased
+  used       Int      @default(0) // Sessions completed
+  amount     Float
+  amountPaid Float    @default(0)
+  status     String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trainer    TeamMember @relation(fields: [trainerId], references: [id])
+  payments   Payment[]
 }

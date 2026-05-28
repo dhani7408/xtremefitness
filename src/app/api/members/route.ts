@@ -78,6 +78,25 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      let ptRecord: { id: string; amount: number } | null = null;
+      if (body.ptTrainerId) {
+        const ptMonths = Number(body.ptMonths || 1);
+        const ptEnd = new Date(start);
+        ptEnd.setMonth(ptEnd.getMonth() + ptMonths);
+        
+        ptRecord = await tx.personalTraining.create({
+          data: {
+            memberId: m.id,
+            trainerId: body.ptTrainerId,
+            startDate: start,
+            endDate: ptEnd,
+            sessions: Number(body.ptSessions || 0),
+            amount: Number(body.ptAmount || 0),
+            notes: body.ptNotes || null,
+          }
+        });
+      }
+
       const rawPay = body.initialPaymentAmount;
       const payAmount =
         rawPay === undefined || rawPay === null || rawPay === ""
@@ -85,46 +104,75 @@ export async function POST(req: NextRequest) {
           : roundMoney(Number(rawPay));
 
       if (Number.isFinite(payAmount) && payAmount > 0) {
-        const due = roundMoney(subscription.amount - subscription.amountPaid);
-        if (due <= 0) {
+        const subDue = roundMoney(subscription.amount);
+        const ptDue = ptRecord ? roundMoney(ptRecord.amount) : 0;
+        const totalDue = roundMoney(subDue + ptDue);
+        
+        if (totalDue <= 0) {
           throw new Error("NO_BALANCE");
         }
-        if (payAmount > due + 0.009) {
-          throw new Error(
-            `PAYMENT_EXCEEDS:${inr(due)}`
-          );
+        if (payAmount > totalDue + 0.009) {
+          throw new Error(`PAYMENT_EXCEEDS:${inr(totalDue)}`);
         }
+        
         const invoiceNo = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const payType = payAmount >= due - 0.009 ? "FULL" : "PARTIAL";
         const method =
           typeof body.initialPaymentMethod === "string" && body.initialPaymentMethod.trim()
             ? body.initialPaymentMethod.trim()
             : "CASH";
-        const payment = await tx.payment.create({
-          data: {
-            memberId: m.id,
-            subscriptionId: subscription.id,
-            amount: payAmount,
-            method,
-            payType,
-            note:
-              typeof body.initialPaymentNote === "string" && body.initialPaymentNote.trim()
-                ? body.initialPaymentNote.trim()
-                : null,
-            invoiceNo,
-          },
-        });
-        await tx.subscription.update({
-          where: { id: subscription.id },
-          data: { amountPaid: roundMoney(subscription.amountPaid + payAmount) },
-        });
-        initialPayment = { id: payment.id, invoiceNo: payment.invoiceNo, payType: payment.payType };
+        
+        let amtForSub = Math.min(payAmount, subDue);
+        let amtForPt = payAmount - amtForSub;
+        
+        if (amtForSub > 0) {
+          const payment = await tx.payment.create({
+            data: {
+              memberId: m.id,
+              subscriptionId: subscription.id,
+              amount: amtForSub,
+              method,
+              payType: amtForSub >= subDue - 0.009 ? "FULL" : "PARTIAL",
+              note:
+                typeof body.initialPaymentNote === "string" && body.initialPaymentNote.trim()
+                  ? body.initialPaymentNote.trim()
+                  : "Membership Payment",
+              invoiceNo: invoiceNo + (amtForPt > 0 ? "-S" : ""),
+            },
+          });
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: { amountPaid: roundMoney(subscription.amountPaid + amtForSub) },
+          });
+          initialPayment = { id: payment.id, invoiceNo: payment.invoiceNo, payType: payment.payType };
+        }
+        
+        if (amtForPt > 0 && ptRecord) {
+          const payment = await tx.payment.create({
+            data: {
+              memberId: m.id,
+              personalTrainingId: ptRecord.id,
+              amount: amtForPt,
+              method,
+              payType: amtForPt >= ptDue - 0.009 ? "FULL" : "PARTIAL",
+              note: "PT Payment",
+              invoiceNo: amtForSub > 0 ? invoiceNo + "-P" : invoiceNo,
+            },
+          });
+          await tx.personalTraining.update({
+            where: { id: ptRecord.id },
+            data: { amountPaid: amtForPt },
+          });
+          if (!initialPayment) {
+             initialPayment = { id: payment.id, invoiceNo: payment.invoiceNo, payType: payment.payType };
+          }
+        }
+        
         receiptNotify = {
           phone: m.phone,
           memberId: m.id,
           firstName: m.firstName,
           amount: payAmount,
-          paymentId: payment.id,
+          paymentId: initialPayment?.id || "",
         };
       }
 

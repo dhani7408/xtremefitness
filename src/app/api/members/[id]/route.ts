@@ -69,7 +69,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   try {
-    const m = await prisma.member.update({ where: { id: params.id }, data });
+    const m = await prisma.$transaction(async (tx) => {
+      const updatedMember = await tx.member.update({ where: { id: params.id }, data });
+      
+      if (body.ptTrainerId && typeof body.ptTrainerId === "string") {
+        const ptMonths = Number(body.ptMonths || 1);
+        const start = new Date();
+        const ptEnd = new Date();
+        ptEnd.setMonth(ptEnd.getMonth() + ptMonths);
+        
+        await tx.personalTraining.create({
+          data: {
+            memberId: params.id,
+            trainerId: body.ptTrainerId,
+            startDate: start,
+            endDate: ptEnd,
+            sessions: Number(body.ptSessions || 0),
+            amount: Number(body.ptAmount || 0),
+            notes: typeof body.ptNotes === "string" ? body.ptNotes : null,
+          }
+        });
+      }
+      
+      return updatedMember;
+    });
+
     return NextResponse.json(m);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";

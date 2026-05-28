@@ -5,20 +5,32 @@ import ManualPunch from "./manual-punch";
 
 export const dynamic = "force-dynamic";
 
-export default async function AttendancePage() {
+export default async function AttendancePage({
+  searchParams,
+}: {
+  searchParams: { filter?: string };
+}) {
+  const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+  
+  let dateFilter = undefined;
+  if (searchParams.filter === "today") {
+    dateFilter = { gte: todayStart };
+  }
+
   const [records, todayCount, deniedCount] = await Promise.all([
     prisma.attendance.findMany({
+      where: { ...(dateFilter ? { checkIn: dateFilter } : {}) },
       orderBy: { checkIn: "desc" },
-      take: 200,
+      take: dateFilter ? undefined : 200,
       include: { member: true, teamMember: true },
     }),
     prisma.attendance.count({
-      where: { checkIn: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+      where: { checkIn: { gte: todayStart } },
     }),
     prisma.attendance.count({
       where: {
         allowed: false,
-        checkIn: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        checkIn: { gte: todayStart },
       },
     }),
   ]);

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; trash?: string };
+  searchParams: { q?: string; status?: string; trash?: string; subStatus?: string };
 }) {
   const session = await getServerSession(authOptions);
   const role = getRoleFromSession(session);
@@ -22,6 +22,9 @@ export default async function MembersPage({
 
   const q = searchParams.q?.trim();
   const status = searchParams.status;
+  const subStatus = searchParams.subStatus;
+  
+  const now = new Date();
 
   const members = await prisma.member.findMany({
     where: {
@@ -39,6 +42,11 @@ export default async function MembersPage({
             }
           : {},
         status ? { status } : {},
+        subStatus === "ACTIVE"
+          ? { subscriptions: { some: { status: "ACTIVE", endDate: { gte: now } } } }
+          : subStatus === "EXPIRED"
+          ? { subscriptions: { some: { OR: [{ status: "EXPIRED" }, { endDate: { lt: now } }] } } }
+          : {},
       ],
     },
     include: {
@@ -46,8 +54,6 @@ export default async function MembersPage({
     },
     orderBy: { createdAt: "desc" },
   });
-
-  const now = new Date();
 
   return (
     <div>
@@ -80,10 +86,18 @@ export default async function MembersPage({
         </div>
         <div>
           <label className="label">Status</label>
-          <select name="status" defaultValue={status ?? ""} className="input w-40">
+          <select name="status" defaultValue={status ?? ""} className="input w-32">
             <option value="">All</option>
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Subscription</label>
+          <select name="subStatus" defaultValue={subStatus ?? ""} className="input w-32">
+            <option value="">All</option>
+            <option value="ACTIVE">Active</option>
+            <option value="EXPIRED">Expired</option>
           </select>
         </div>
         {!trash && <input type="hidden" name="trash" value="" />}

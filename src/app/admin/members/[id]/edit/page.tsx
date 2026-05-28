@@ -19,6 +19,11 @@ export default async function EditMemberPage({ params }: { params: { id: string 
   if (!member) notFound();
   if (member.deletedAt && !superUser) notFound();
 
+  const trainers = await prisma.teamMember.findMany({
+    where: { role: "TRAINER", status: "ACTIVE" },
+    select: { id: true, firstName: true, lastName: true },
+  });
+
   const initial: EditMemberInitial = {
     id: member.id,
     firstName: member.firstName,
@@ -41,7 +46,7 @@ export default async function EditMemberPage({ params }: { params: { id: string 
           ← Back to profile
         </Link>
       </div>
-      <EditMemberForm member={initial} />
+      <EditMemberForm member={initial} trainers={trainers} />
     </div>
   );
 }
